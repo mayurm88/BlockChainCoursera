@@ -63,7 +63,8 @@ public class BlockChain {
             ArrayList<Block> blockList = new ArrayList<>();
             blockList.add(block);
             heightBlockMap.put(1, blockList);
-            hashBlockMap.put(new ByteArrayWrapper(block.getHash()), new BlockModel(block, 1));
+            UTXOPool uPool = createUTXOPool(null, block);
+            hashBlockMap.put(new ByteArrayWrapper(block.getHash()), new BlockModel(block, 1, uPool));
             return true;
         }
 
@@ -90,18 +91,65 @@ public class BlockChain {
         heightBlockMap.put(blockHeight, blockHeightArrayList);
 
         // Insert BlockModel in hashBlock Map
-        BlockModel currentBlockModel = new BlockModel(block, blockHeight);
+        UTXOPool uPool = createUTXOPool(parentBlockModel.utxoPool, block);
+        BlockModel currentBlockModel = new BlockModel(block, blockHeight, uPool);
         hashBlockMap.put(new ByteArrayWrapper(block.getHash()), currentBlockModel);
 
         removeBlocksLowerThanCutoff(currentHeight);
         return true;
     }
 
+    private UTXOPool createUTXOPool(UTXOPool currentPool, Block block) {
+        if(currentPool == null) {
+            UTXOPool uPool = new UTXOPool();
+            // Genesis block. Add all outputs to utxoPool.
+            ArrayList<Transaction> txList = block.getTransactions();
+            for(Transaction tx : txList) {
+                ArrayList<Transaction.Output> outputList = tx.getOutputs();
+                int idx = 0;
+                for(Transaction.Output output : outputList) {
+                    UTXO utxo = new UTXO(tx.getHash(), idx);
+                    uPool.addUTXO(utxo, output);
+                    idx++;
+                }
+            }
+            return uPool;
+        }
+
+        UTXOPool uPool = new UTXOPool(currentPool);
+        ArrayList<Transaction> txList = block.getTransactions();
+
+        // Important to add outpus first and then remove inputs ??
+
+        // Add all outputs as UTXOs from the block to UTXO Pool
+        for(Transaction tx : txList) {
+            ArrayList<Transaction.Output> outputList = tx.getOutputs();
+            int idx = 0;
+            for(Transaction.Output output : outputList) {
+                UTXO utxo = new UTXO(tx.getHash(), idx);
+                uPool.addUTXO(utxo, output);
+                idx++;
+            }
+        }
+
+        // Remove all spent inputs from UTXO Pool
+        for(Transaction tx : txList) {
+            ArrayList<Transaction.Input> inputList = tx.getInputs();
+            for(Transaction.Input input : inputList) {
+                UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
+                uPool.removeUTXO(utxo);
+            }
+        }
+
+        return uPool;
+
+    }
     private void removeBlocksLowerThanCutoff(Integer currentHeight) {
 
     }
 
     private boolean verifyBlock(Block block) {
+
 
     }
     /** Add a transaction to the transaction pool */
@@ -112,9 +160,11 @@ public class BlockChain {
     private class BlockModel {
         Block block;
         Integer height;
-        public BlockModel(Block block, Integer height) {
+        UTXOPool utxoPool;
+        public BlockModel(Block block, Integer height, UTXOPool utxoPool) {
             this.block = block;
             this.height = height;
+            this.utxoPool = utxoPool;
         }
     }
 
