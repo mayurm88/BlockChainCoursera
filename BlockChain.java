@@ -63,7 +63,7 @@ public class BlockChain {
             ArrayList<Block> blockList = new ArrayList<>();
             blockList.add(block);
             heightBlockMap.put(1, blockList);
-            UTXOPool uPool = createUTXOPool(null, block);
+            UTXOPool uPool = createUTXOPoolForGenesisBlock(block);
             hashBlockMap.put(new ByteArrayWrapper(block.getHash()), new BlockModel(block, 1, uPool));
             return true;
         }
@@ -73,7 +73,8 @@ public class BlockChain {
             return false;
 
         // Verify that incoming block is valid.
-        if(!verifyBlock(block))
+        UTXOPool uPoolAfterBlockAddition = verifyBlock(block, parentBlockModel.utxoPool);
+        if(uPoolAfterBlockAddition == null)
             return false;
 
         // If this is a newly found block corresponding to the root we are on..
@@ -91,67 +92,43 @@ public class BlockChain {
         heightBlockMap.put(blockHeight, blockHeightArrayList);
 
         // Insert BlockModel in hashBlock Map
-        UTXOPool uPool = createUTXOPool(parentBlockModel.utxoPool, block);
-        BlockModel currentBlockModel = new BlockModel(block, blockHeight, uPool);
+        BlockModel currentBlockModel = new BlockModel(block, blockHeight, uPoolAfterBlockAddition);
         hashBlockMap.put(new ByteArrayWrapper(block.getHash()), currentBlockModel);
 
         removeBlocksLowerThanCutoff(currentHeight);
         return true;
     }
 
-    private UTXOPool createUTXOPool(UTXOPool currentPool, Block block) {
-        if(currentPool == null) {
-            UTXOPool uPool = new UTXOPool();
-            // Genesis block. Add all outputs to utxoPool.
-            ArrayList<Transaction> txList = block.getTransactions();
-            for(Transaction tx : txList) {
-                ArrayList<Transaction.Output> outputList = tx.getOutputs();
-                int idx = 0;
-                for(Transaction.Output output : outputList) {
-                    UTXO utxo = new UTXO(tx.getHash(), idx);
-                    uPool.addUTXO(utxo, output);
-                    idx++;
-                }
-            }
-            return uPool;
-        }
+    private UTXOPool createUTXOPoolForGenesisBlock(Block block) {
 
-        UTXOPool uPool = new UTXOPool(currentPool);
+        // Genesis block. Add all outputs to utxoPool.
+        UTXOPool uPool = new UTXOPool();
         ArrayList<Transaction> txList = block.getTransactions();
-
-        // Important to add outpus first and then remove inputs ??
-
-        // Add all outputs as UTXOs from the block to UTXO Pool
-        for(Transaction tx : txList) {
+        for (Transaction tx : txList) {
             ArrayList<Transaction.Output> outputList = tx.getOutputs();
             int idx = 0;
-            for(Transaction.Output output : outputList) {
+            for (Transaction.Output output : outputList) {
                 UTXO utxo = new UTXO(tx.getHash(), idx);
                 uPool.addUTXO(utxo, output);
                 idx++;
             }
         }
-
-        // Remove all spent inputs from UTXO Pool
-        for(Transaction tx : txList) {
-            ArrayList<Transaction.Input> inputList = tx.getInputs();
-            for(Transaction.Input input : inputList) {
-                UTXO utxo = new UTXO(input.prevTxHash, input.outputIndex);
-                uPool.removeUTXO(utxo);
-            }
-        }
-
         return uPool;
-
     }
+    
     private void removeBlocksLowerThanCutoff(Integer currentHeight) {
 
     }
 
-    private boolean verifyBlock(Block block) {
-
-
+    private UTXOPool verifyBlock(Block block, UTXOPool uPool) {
+        TxHandler txHandler = new TxHandler(uPool);
+        ArrayList<Transaction> txList = block.getTransactions();
+        Transaction[] acceptedTxs = txHandler.handleTxs((Transaction[]) txList.toArray());
+        if(acceptedTxs.length != txList.size())
+            return null;
+        return txHandler.getUTXOPool();
     }
+
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
         // IMPLEMENT THIS
