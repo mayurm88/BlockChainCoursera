@@ -12,6 +12,7 @@ public class BlockChain {
 
     HashMap<Integer, ArrayList<Block>> heightBlockMap;
     HashMap<ByteArrayWrapper, BlockModel> hashBlockMap;
+    TransactionPool txPool;
 
     /**
      * create an empty block chain with just a genesis block. Assume {@code genesisBlock} is a valid
@@ -21,6 +22,7 @@ public class BlockChain {
         // IMPLEMENT THIS
         heightBlockMap = new HashMap<Integer, ArrayList<Block>>();
         hashBlockMap = new HashMap<ByteArrayWrapper, BlockModel>();
+        txPool = new TransactionPool();
         addBlock(genesisBlock);
     }
 
@@ -28,8 +30,9 @@ public class BlockChain {
     public Block getMaxHeightBlock() {
         // IMPLEMENT THIS
         ArrayList<Block> blockList = heightBlockMap.get(currentHeight);
-        if(blockList != null) {
-            return blockList.get(0);
+        if (blockList != null) {
+            Block maxHeightBlock = blockList.get(0);
+            return maxHeightBlock;
         }
         return null;
     }
@@ -50,7 +53,7 @@ public class BlockChain {
     /** Get the transaction pool to mine a new block */
     public TransactionPool getTransactionPool() {
         // IMPLEMENT THIS
-        return null;
+        return txPool;
     }
 
     /**
@@ -80,6 +83,7 @@ public class BlockChain {
             heightBlockMap.put(1, blockList);
             UTXOPool uPool = createUTXOPoolForGenesisBlock(block);
             hashBlockMap.put(new ByteArrayWrapper(block.getHash()), new BlockModel(block, 1, uPool));
+            currentHeight++;
             return true;
         }
 
@@ -153,7 +157,8 @@ public class BlockChain {
     private UTXOPool verifyBlock(Block block, UTXOPool uPool) {
         TxHandler txHandler = new TxHandler(uPool);
         ArrayList<Transaction> txList = block.getTransactions();
-        Transaction[] acceptedTxs = txHandler.handleTxs((Transaction[]) txList.toArray());
+        Transaction[] txArray = txList.toArray(new Transaction[txList.size()]);
+        Transaction[] acceptedTxs = txHandler.handleTxs(txArray);
         if(acceptedTxs.length != txList.size())
             return null;
         return txHandler.getUTXOPool();
@@ -162,6 +167,7 @@ public class BlockChain {
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
         // IMPLEMENT THIS
+
     }
 
     private class BlockModel {
