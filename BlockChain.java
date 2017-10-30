@@ -142,8 +142,8 @@ public class BlockChain {
     }
     
     private void removeBlocksLowerThanCutoff() {
-        Integer removeHeight = currentHeight - CUT_OFF_AGE;
-        if(removeHeight < 0)
+        Integer removeHeight = currentHeight - CUT_OFF_AGE - 1;
+        if(removeHeight <= 0)
             return;
         removeBlockWithHeight(removeHeight);
     }
