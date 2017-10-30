@@ -99,7 +99,10 @@ public class BlockChain {
         // If this is a newly found block corresponding to the root we are on..
         Integer blockHeight = parentBlockModel.height + 1;
         if(blockHeight > currentHeight) {
+            // This block is going to be the longest valid branch.
+            // Remove all transactions from the txPool which are present in this block.
             currentHeight = blockHeight;
+            removeTxsFromTxPool(block);
         }
 
         // Insert block in the heightBlock Map
@@ -125,6 +128,13 @@ public class BlockChain {
 
         removeBlocksLowerThanCutoff();
         return true;
+    }
+
+    private void removeTxsFromTxPool(Block block) {
+        ArrayList<Transaction> txList = block.getTransactions();
+        for(Transaction tx : txList) {
+            txPool.removeTransaction(tx.getHash());
+        }
     }
 
     private UTXOPool createUTXOPoolForGenesisBlock(Block block) {
@@ -173,7 +183,7 @@ public class BlockChain {
     /** Add a transaction to the transaction pool */
     public void addTransaction(Transaction tx) {
         // IMPLEMENT THIS
-
+        txPool.addTransaction(tx);
     }
 
     private class BlockModel {
