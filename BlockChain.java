@@ -9,6 +9,7 @@ public class BlockChain {
     public static final int CUT_OFF_AGE = 10;
 
     private Integer currentHeight = 0;
+
     HashMap<Integer, ArrayList<Block>> heightBlockMap;
     HashMap<ByteArrayWrapper, BlockModel> hashBlockMap;
 
@@ -26,16 +27,30 @@ public class BlockChain {
     /** Get the maximum height block */
     public Block getMaxHeightBlock() {
         // IMPLEMENT THIS
+        ArrayList<Block> blockList = heightBlockMap.get(currentHeight);
+        if(blockList != null) {
+            return blockList.get(0);
+        }
+        return null;
     }
 
     /** Get the UTXOPool for mining a new block on top of max height block */
     public UTXOPool getMaxHeightUTXOPool() {
         // IMPLEMENT THIS
+        ArrayList<Block> blockList = heightBlockMap.get(currentHeight);
+        if(blockList != null) {
+            Block maxHeightBlock = blockList.get(0);
+            ByteArrayWrapper maxHeightBlockHash = new ByteArrayWrapper(maxHeightBlock.getHash());
+            BlockModel blockModel = hashBlockMap.get(maxHeightBlockHash);
+            return blockModel.utxoPool;
+        }
+        return null;
     }
 
     /** Get the transaction pool to mine a new block */
     public TransactionPool getTransactionPool() {
         // IMPLEMENT THIS
+        return null;
     }
 
     /**
@@ -95,7 +110,7 @@ public class BlockChain {
         BlockModel currentBlockModel = new BlockModel(block, blockHeight, uPoolAfterBlockAddition);
         hashBlockMap.put(new ByteArrayWrapper(block.getHash()), currentBlockModel);
 
-        removeBlocksLowerThanCutoff(currentHeight);
+        removeBlocksLowerThanCutoff();
         return true;
     }
 
@@ -116,8 +131,23 @@ public class BlockChain {
         return uPool;
     }
     
-    private void removeBlocksLowerThanCutoff(Integer currentHeight) {
+    private void removeBlocksLowerThanCutoff() {
+        Integer removeHeight = currentHeight - CUT_OFF_AGE;
+        if(removeHeight < 0)
+            return;
+        removeBlockWithHeight(removeHeight);
+    }
 
+    private void removeBlockWithHeight(Integer height) {
+        // First remove blocks from hashBlockMap
+        ArrayList<Block> blockList = heightBlockMap.get(height);
+        if(blockList == null)
+            return;
+        for(Block block : blockList) {
+            ByteArrayWrapper blockHash = new ByteArrayWrapper(block.getHash());
+            hashBlockMap.remove(blockHash);
+        }
+        heightBlockMap.remove(height);
     }
 
     private UTXOPool verifyBlock(Block block, UTXOPool uPool) {
