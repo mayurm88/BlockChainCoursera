@@ -110,6 +110,15 @@ public class BlockChain {
         blockHeightArrayList.add(block);
         heightBlockMap.put(blockHeight, blockHeightArrayList);
 
+        // Add coinbase transaction to the uPoolAfterBlockAddition
+        int idx = 0;
+        Transaction coinbaseTx = block.getCoinbase();
+        ArrayList<Transaction.Output> coinbaseOutputs = coinbaseTx.getOutputs();
+        for(Transaction.Output output : coinbaseOutputs) {
+            UTXO utxo = new UTXO(coinbaseTx.getHash(), idx);
+            uPoolAfterBlockAddition.addUTXO(utxo, output);
+            idx++;
+        }
         // Insert BlockModel in hashBlock Map
         BlockModel currentBlockModel = new BlockModel(block, blockHeight, uPoolAfterBlockAddition);
         hashBlockMap.put(new ByteArrayWrapper(block.getHash()), currentBlockModel);
