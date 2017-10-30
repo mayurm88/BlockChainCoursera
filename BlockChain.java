@@ -122,15 +122,12 @@ public class BlockChain {
 
         // Genesis block. Add all outputs to utxoPool.
         UTXOPool uPool = new UTXOPool();
-        ArrayList<Transaction> txList = block.getTransactions();
-        for (Transaction tx : txList) {
-            ArrayList<Transaction.Output> outputList = tx.getOutputs();
-            int idx = 0;
-            for (Transaction.Output output : outputList) {
-                UTXO utxo = new UTXO(tx.getHash(), idx);
-                uPool.addUTXO(utxo, output);
-                idx++;
-            }
+        Transaction coinbaseTx = block.getCoinbase();
+        int idx = 0;
+        for(Transaction.Output output : coinbaseTx.getOutputs()) {
+            UTXO utxo = new UTXO(coinbaseTx.getHash(), idx);
+            uPool.addUTXO(utxo, output);
+            idx++;
         }
         return uPool;
     }
